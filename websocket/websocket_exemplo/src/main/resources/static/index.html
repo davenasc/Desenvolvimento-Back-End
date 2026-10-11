@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cliente WebSocket</title>
+    <!-- Bibliotecas SockJS e STOMP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+
+<body>
+    <h2>Teste de WebSocket</h2>
+
+    <div>
+        <button onclick="conectar()">Conectar</button>
+        <button onclick="desconectar()">Desconectar</button>
+    </div>
+
+    <br>
+
+    <div>
+        <input type="text" id="inputMensagem" placeholder="Digite uma mensagem..." />
+        <button onclick="enviarMensagem()">Enviar</button>
+    </div>
+
+    <h3>Mensagens Recebidas:</h3>
+    <ul id="mensagens"></ul>
+
+    <script>
+        let stompClient = null;
+
+        function conectar() {
+            // 1. Endpoint configurado no registry.addEndpoint("/ws")
+            const socket = new SockJS('http://localhost:8080/ws');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                console.log('Conectado: ' + frame);
+                window.alert('Conectado: ' + frame);
+                // 2. Se inscreve no tópico para receber mensagens do servidor
+                stompClient.subscribe('/topic/publico', function (resposta) {
+                    exibirMensagem(resposta.body);
+                });
+            }, function (error) {
+                console.error('Erro na conexão:', error);
+            });
+        }
+
+        function enviarMensagem() {
+            const input = document.getElementById('inputMensagem');
+            const texto = input.value;
+
+            if (stompClient && stompClient.connected) {
+                // 3. Envia para o destino mapeado no @MessageMapping("/mensagem")
+                stompClient.send("/app/mensagem", {}, texto);
+                input.value = '';
+            } else {
+                alert('Conecte ao WebSocket primeiro!');
+            }
+        }
+
+        function desconectar() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            console.log("Desconectado");
+            window.alert("Desconectado");
+        }
+
+        function exibirMensagem(mensagem) {
+            const ul = document.getElementById('mensagens');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(mensagem));
+            ul.appendChild(li);
+        }
+    </script>
+</body>
+
+</html>
